@@ -33,12 +33,13 @@ class VK:
         res = requests.get(url=url, params=params)
         return res.json()
 
-    def get_all_photos(self):
+    def get_all_photos(self, local_folder: str):
         data = self.get_photos()
         i = 0
         count = 50
         photos = []  # Список всех загруженных фото
         max_size_photo = {}  # Словарь вида {photo_name:photo_url}
+        #local_folder = "E:\\colab_F\\Course\\"
  
         # Создаём папку на компьютере для скачивания фотографий
         if not os.path.exists(local_folder+'vk_images'):
@@ -119,17 +120,21 @@ class YandexDisk:
             requests.put(href, data=open(files_path, 'rb'))
 
 
-vk_access_token =str(input('Введите VK токен: '))
+#Создание подключения к ВК
+vk_access_token =str(input('Введите VK токен: ')) # токен ВК
 user_id = '45432918' # идентификатор пользователя vk
 vk = VK(vk_access_token, user_id)
 
 # Получение фотографий
-vk.get_all_photos()
-local_folder = "E:\\colab_F\\home\\Course"
-yandex_token =  str(input('Введите токен на Яндекс диске: '))
-uploader = YandexDisk(yandex_token)
+local_folder = "E:\\colab_F\\Course\\"
+vk.get_all_photos(local_folder)
 
-photos_list = os.listdir(local_folder)
+#Создание подключения к Я.Диску
+yandex_token =  str(input('Введите токен на Яндекс диске: ')) # токен Я.Диска
+uploader = YandexDisk(yandex_token) 
+
+# Получение списка скаченных фотографий 
+photos_list = os.listdir(local_folder+ "vk_images\\")
 print(photos_list)
 count = 0
 
@@ -138,7 +143,7 @@ uploader.folder_creation()
 
 for photo in photos_list:
     file_name = photo
-    files_path = local_folder+'\\' + photo
+    files_path = local_folder + "vk_images\\"+photo
     result = uploader.upload(files_path)
     count += 1
     print(f'Загружено на Яндекс диск: {count} из {len(photos_list)}')
