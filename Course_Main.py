@@ -83,7 +83,7 @@ class VK:
             i += count
 
         # Генерация json файла с фотографиями
-        with open("photos.json", 'w') as file:
+        with open(os.path.join(local_folder,"photos.json"), 'w') as file:
             json.dump(photos, file, ensure_ascii=False, indent=4)
 
 
@@ -132,7 +132,7 @@ uploader = YandexDisk(yandex_token)
 
 # Получение списка скаченных фотографий 
 photos_list = os.listdir(local_folder+ "vk_images\\")
-#print(photos_list)
+print(photos_list)
 count = 0
 
 folder_name = str(input('Введите имя папки на Яндекс диске: '))
