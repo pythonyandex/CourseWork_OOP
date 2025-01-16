@@ -70,11 +70,8 @@ class VK:
                 # Сохраням список самых большых фотографий
                 photos_info['size'] = max_size_item['type']
                 photos.append(photos_info)
-            #print(1,photos_info)
-           # print(2,max_size_photo)
-           # print(3,size)
-          #  print(4,photo)
-          #  print(5,photos)
+
+
             # Скачиваем фотографии
             for photo_name, photo_url in max_size_photo.items():
                 with open(os.path.join(local_folder,'vk_images\%s' % f'{photo_name}.jpg'), 'wb') as file:
@@ -86,8 +83,8 @@ class VK:
             i += count
 
         # Генерация json файла с фотографиями
-        with open("photos.json", "w") as file:
-            json.dump(photos, file, indent=4)
+        with open("photos.json", 'w') as file:
+            json.dump(photos, file, ensure_ascii=False, indent=4)
 
 
 
@@ -135,7 +132,7 @@ uploader = YandexDisk(yandex_token)
 
 # Получение списка скаченных фотографий 
 photos_list = os.listdir(local_folder+ "vk_images\\")
-print(photos_list)
+#print(photos_list)
 count = 0
 
 folder_name = str(input('Введите имя папки на Яндекс диске: '))
