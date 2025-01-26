@@ -33,60 +33,50 @@ class VK:
         res = requests.get(url=url, params=params)
         return res.json()
 
-    def get_all_photos(self, local_folder: str):
+    def get_all_photos(self):
         data = self.get_photos()
+        all_photo_count = data['response']['count']  # Количество всех фотографий профиля
         i = 0
         count = 50
         photos = []  # Список всех загруженных фото
-        max_size_photo = {}  # Словарь вида {photo_name:photo_url}
-        #local_folder = "E:\\colab_F\\Course\\"
- 
-        # Создаём папку на компьютере для скачивания фотографий
-        if not os.path.exists(local_folder+'vk_images'):
-            os.mkdir(local_folder+'vk_images')
+        max_size_photo = {}  # Словарь с парой название фото - URL фото максимального разрешения
 
 
-        # Получаем все фотографии
-        while i <= data['response']['count']:
+
+        while i <= all_photo_count:
             if i != 0:
                 data = self.get_photos(offset=i, count=count)
 
-                
+            # Проходимся по всем фотографиям
+
+
+
             for photo in data['response']['items']:
                 max_size = 0
                 photos_info = {}
-                # Сохраням информацию о самом большом фото в max_size_photo
-                for size in photo['sizes']:
-                    if size['height'] >= max_size:
-                        max_size = size['height']
-                        max_size_item = size
+                # Выбираем фото максимального разрешения и добавляем в словарь max_size_photo
+                max_size_item=sorted(photo['sizes'],key=lambda x: x['height'] * x['width'],reverse=True )[0]
+
                 if photo['likes']['count'] not in max_size_photo.keys():
                     max_size_photo[photo['likes']['count']] = max_size_item['url']
                     photos_info['file_name'] = f"{photo['likes']['count']}.jpg"
+                    photos_info['url'] = max_size_item['url']
                 else:
                     max_size_photo[f"{photo['likes']['count']} + {photo['date']}"] = max_size_item['url']
                     photos_info['file_name'] = f"{photo['likes']['count']}+{photo['date']}.jpg"
+                    photos_info['url'] = max_size_item['url']
 
-                # Сохраням список самых большых фотографий
+                # Формируем список всех фотографий для дальнейшей упаковки в .json
+
                 photos_info['size'] = max_size_item['type']
                 photos.append(photos_info)
+ 
 
-
-            # Скачиваем фотографии
-            for photo_name, photo_url in max_size_photo.items():
-                with open(os.path.join(local_folder,'vk_images\%s' % f'{photo_name}.jpg'), 'wb') as file:
-                    img = requests.get(photo_url)
-                    #print(img.content)
-                    file.write(img.content)
-
-            print(f'Загружено {len(max_size_photo)} фото')
             i += count
 
-        # Генерация json файла с фотографиями
-        with open(os.path.join(local_folder,"photos.json"), 'w') as file:
-            json.dump(photos, file, ensure_ascii=False, indent=4)
 
 
+        return photos
 
 
 class YandexDisk:
@@ -102,46 +92,50 @@ class YandexDisk:
             # Cоздание папки
             requests.put(url=url, headers=headers, params=params)
 
-        def upload(self, file_path: str):
+        def upload(self, file, filename):
             url = f'https://cloud-api.yandex.net/v1/disk/resources/upload'
             headers = {'Content-Type': 'application/json',
                        'Authorization': f'OAuth {yandex_token}'}
-            params = {'path': f'{folder_name}/{file_name}',
-                      'overwrite': 'true'}
+            params = {'path': filename, 'overwrite': 'true'}
 
             # Получение ссылки
             response = requests.get(url=url, headers=headers, params=params)
             href = response.json().get('href')
 
             # Загрузка файла
-            requests.put(href, data=open(files_path, 'rb'))
+            requests.put(href, data=file)
 
 
-#Создание подключения к ВК
-vk_access_token =str(input('Введите VK токен: ')) # токен ВК
+vk_access_token = str(input('Введите ВК токен: '))
 user_id = '45432918' # идентификатор пользователя vk
 vk = VK(vk_access_token, user_id)
 
 # Получение фотографий
-local_folder = "E:\\colab_F\\Course\\"
-vk.get_all_photos(local_folder)
+photos=vk.get_all_photos()
 
-#Создание подключения к Я.Диску
-yandex_token =  str(input('Введите токен на Яндекс диске: ')) # токен Я.Диска
-uploader = YandexDisk(yandex_token) 
-
-# Получение списка скаченных фотографий 
-photos_list = os.listdir(local_folder+ "vk_images\\")
-print(photos_list)
 count = 0
+yandex_token = str(input('Введите Яндекс токен: '))
 
+uploader = YandexDisk(yandex_token)
 folder_name = str(input('Введите имя папки на Яндекс диске: '))
 uploader.folder_creation()
+photos_json=[]
 
-for photo in photos_list:
-    file_name = photo
-    files_path = local_folder + "vk_images\\"+photo
-    result = uploader.upload(files_path)
+for photo in photos:
+    file_name = f"{folder_name}/{photo['file_name']}"
+    #files_path = folder_name+'\\' + photo
+    response = requests.get(photo["url"])
+    file = response.content
+    result = uploader.upload(file,file_name)
     count += 1
-    print(f'Загружено на Яндекс диск: {count} из {len(photos_list)}')
-    print("["+count*"="+(len(photos_list)-count)*' '+"]",int(count/len(photos_list)*100),"%")
+    print(f'Загружено на Яндекс диск: {count} из {len(photos)}')
+    print("["+count*"="+(len(photos)-count)*' '+"]",int(count/len(photos)*100),"%")
+    photos_info={}
+    photos_info['file_name'] = f"{photo['file_name']}.jpg"
+    photos_info['url'] = photo['url']
+    photos_json.append(photos_info)
+
+
+
+with open("photos.json", "w") as file:
+        json.dump(photos_json, file, indent=4)
